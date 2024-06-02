@@ -1,0 +1,85 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using System;
+using System.Threading;
+using System.Linq;
+
+public class Action : MonoBehaviour
+{
+
+    private Animator animator;
+    private List<string> queuedStates;
+
+    void Start()
+    {
+#if !UNITY_EDITOR && UNITY_WEBGL
+        WebGLInput.captureAllKeyboardInput = false;
+#endif
+        animator = GetComponent<Animator>();
+    }
+
+    void Update()
+    {
+        /*if (Input.GetKeyDown(KeyCode.Space))
+        {
+            Act("[\"hello\",\"negative\",\"sorry\"]");
+        }
+        if (Input.GetAxis("Mouse ScrollWheel") < 0)
+        {
+            ChangeCameraZoom(0.5f);
+        }
+        else if (Input.GetAxis("Mouse ScrollWheel") > 0)
+        {
+            ChangeCameraZoom(-0.5f);
+        }*/
+    }
+
+    
+    public void Act(string serializedStates)
+    {
+        queuedStates = ParseSerializedJsonArray(serializedStates);
+
+        
+        StopAllCoroutines();
+        
+        StartCoroutine(PlayQueuedStates(0));
+    }
+
+  
+    private List<string> ParseSerializedJsonArray(string serializedJsonArray)
+    {
+        return serializedJsonArray[2..^2].Split("\",\"").ToList();
+    }
+
+    
+    private IEnumerator PlayQueuedStates(int index)
+    {
+        
+        if (queuedStates.Count <= index)
+            yield break;
+
+        string currentState = "Armature|" + queuedStates[index];
+
+        animator.Play(currentState);
+
+        
+        while (!animator.GetCurrentAnimatorStateInfo(0).IsName(currentState))
+        {
+            yield return null;
+        }
+
+        
+        while (animator.GetCurrentAnimatorStateInfo(0).normalizedTime < 1)
+        {
+            yield return null;
+        }
+
+        
+        StartCoroutine(PlayQueuedStates(index + 1));
+    }
+    private void ChangeCameraZoom(float zoom)
+    {
+        Camera.main.fieldOfView = zoom;
+    }
+}
